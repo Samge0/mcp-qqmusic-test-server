@@ -44,9 +44,14 @@
 }
 ```
 
-### 搜索音乐
+![image](https://github.com/user-attachments/assets/96a1d8b6-f527-4702-94b5-745287323648)
 
-使用关键词搜索音乐曲目。
+![image](https://github.com/user-attachments/assets/9826ab69-dbe5-47fd-9ba6-c809315351a3)
+
+
+### 测试搜索音乐
+
+<details> <summary>使用关键词搜索音乐曲目>></summary>
 
 **函数：** `search_music`
 
@@ -83,3 +88,5 @@
   }
 ]
 ```
+
+</details>
