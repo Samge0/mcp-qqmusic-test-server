@@ -2,6 +2,9 @@
 
 这是一个通过MCP（模块化控制协议）提供QQ音乐搜索功能的测试服务器。该服务器允许您使用关键词搜索音乐曲目，并返回相关歌曲信息。
 
+
+> 🌐 **[在线宣传页](https://samge0.github.io/mcp-qqmusic-test-server/)** — 可视化了解功能特性与工作流程
+
 该demo仅用于测试和学习目的，其中音乐检索使用的是[qqmusic-api-python](https://github.com/luren-dc/QQMusicApi)。
 
 ## 功能特点

@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MCP QQ音乐测试服务器 - 音乐搜索功能的MCP协议实现</title>
+  <meta name="description" content="通过MCP（模块化控制协议）提供QQ音乐搜索功能的测试服务器，支持关键词搜索音乐曲目">
+  <link rel="icon" type="image/png" href="icon.png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              400: '#6b8ee8',
+              500: '#416ed8',
+              600: '#3358b0',
+              700: '#294489',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'Noto Sans SC', 'system-ui', 'sans-serif'],
+            serif: ['Manrope', 'Noto Serif SC', 'Georgia', 'serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    .glass {
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #416ed8 0%, #6b8ee8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    details summary {
+      cursor: pointer;
+      list-style: none;
+    }
+    details summary::-webkit-details-marker {
+      display: none;
+    }
+    .icon-gradient {
+      background: linear-gradient(135deg, #416ed8 0%, #3358b0 100%);
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-gray-50 via-blue-50/30 to-blue-50/20 min-h-screen">
+  
+  <!-- Top Navigation -->
+  <nav class="fixed top-0 left-0 right-0 z-50 glass">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <!-- Logo -->
+        <div class="flex items-center space-x-3">
+          <img src="icon.png" alt="MCP QQ音乐测试服务器" class="w-9 h-9 rounded-lg">
+          <span class="font-semibold text-gray-900">MCP QQ音乐测试服务器</span>
+        </div>
+        
+        <!-- Navigation Links -->
+        <div class="hidden md:flex items-center space-x-8">
+          <a href="#features" class="text-gray-600 hover:text-brand-500 transition-colors">功能特点</a>
+          <a href="#how-it-works" class="text-gray-600 hover:text-brand-500 transition-colors">使用方法</a>
+          <a href="#faq" class="text-gray-600 hover:text-brand-500 transition-colors">FAQ</a>
+        </div>
+        
+        <!-- CTA Buttons -->
+        <div class="flex items-center space-x-4">
+          <a href="https://github.com/Samge0/mcp-qqmusic-test-server" target="_blank" rel="noopener noreferrer" class="text-gray-600 hover:text-brand-500 transition-colors">
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+              <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd"/>
+            </svg>
+          </a>
+          <a href="https://github.com/Samge0/mcp-qqmusic-test-server" target="_blank" rel="noopener noreferrer" class="bg-brand-500 hover:bg-brand-600 text-white px-5 py-2.5 rounded-lg font-medium transition-all hover:shadow-lg hover:shadow-brand-500/25">
+            开始使用
+          </a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center max-w-4xl mx-auto">
+        <div class="inline-flex items-center space-x-2 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-full px-4 py-2 mb-8">
+          <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+          <span class="text-sm text-gray-600">基于 MCP 协议 · QQ音乐搜索</span>
+        </div>
+        
+        <h1 class="text-5xl sm:text-6xl lg:text-7xl font-bold text-gray-900 mb-6 leading-tight">
+          <span class="gradient-text">MCP QQ音乐</span><br>
+          <span class="text-gray-900">测试服务器</span>
+        </h1>
+        
+        <p class="text-xl text-gray-600 mb-10 max-w-2xl mx-auto leading-relaxed">
+          通过模块化控制协议（MCP）提供QQ音乐搜索功能的测试服务器。使用关键词搜索音乐曲目，获取详细的歌曲信息。
+        </p>
+        
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <a href="https://github.com/Samge0/mcp-qqmusic-test-server" target="_blank" rel="noopener noreferrer" class="w-full sm:w-auto bg-brand-500 hover:bg-brand-600 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all hover:shadow-xl hover:shadow-brand-500/30 flex items-center justify-center space-x-2">
+            <span>获取开始</span>
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+            </svg>
+          </a>
+          <a href="#how-it-works" class="w-full sm:w-auto bg-white hover:bg-gray-50 text-gray-700 px-8 py-4 rounded-xl font-semibold text-lg border border-gray-200 transition-all flex items-center justify-center space-x-2">
+            <svg class="w-5 h-5 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            <span>查看文档</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section id="features" class="py-20 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">功能特点</h2>
+        <p class="text-lg text-gray-600 max-w-2xl mx-auto">强大的音乐搜索能力，简单的集成方式</p>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <!-- Feature 1 -->
+        <div class="glass rounded-2xl p-8 hover:shadow-lg hover:shadow-brand-500/10 transition-all">
+          <div class="icon-gradient w-14 h-14 rounded-xl flex items-center justify-center mb-6">
+            <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+          </div>
+          <h3 class="text-xl font-semibold text-gray-900 mb-3">关键词搜索</h3>
+          <p class="text-gray-600 leading-relaxed">支持使用任意关键词搜索音乐曲目，快速找到您想要的歌曲。</p>
+        </div>
+        
+        <!-- Feature 2 -->
+        <div class="glass rounded-2xl p-8 hover:shadow-lg hover:shadow-brand-500/10 transition-all">
+          <div class="icon-gradient w-14 h-14 rounded-xl flex items-center justify-center mb-6">
+            <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+          </div>
+          <h3 class="text-xl font-semibold text-gray-900 mb-3">详细信息返回</h3>
+          <p class="text-gray-600 leading-relaxed">返回歌曲ID、名称、副标题、发布时间等完整的歌曲元数据信息。</p>
+        </div>
+        
+        <!-- Feature 3 -->
+        <div class="glass rounded-2xl p-8 hover:shadow-lg hover:shadow-brand-500/10 transition-all">
+          <div class="icon-gradient w-14 h-14 rounded-xl flex items-center justify-center mb-6">
+            <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+            </svg>
+          </div>
+          <h3 class="text-xl font-semibold text-gray-900 mb-3">MCP 协议支持</h3>
+          <p class="text-gray-600 leading-relaxed">完全兼容 MCP 协议标准，易于集成到各种支持 MCP 的客户端应用中。</p>
+        </div>
+        
+        <!-- Feature 4 -->
+        <div class="glass rounded-2xl p-8 hover:shadow-lg hover:shadow-brand-500/10 transition-all">
+          <div class="icon-gradient w-14 h-14 rounded-xl flex items-center justify-center mb-6">
+            <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <h3 class="text-xl font-semibold text-gray-900 mb-3">分页支持</h3>
+          <p class="text-gray-600 leading-relaxed">支持分页搜索功能，可以灵活控制返回结果的数量和页码。</p>
+        </div>
+        
+        <!-- Feature 5 -->
+        <div class="glass rounded-2xl p-8 hover:shadow-lg hover:shadow-brand-500/10 transition-all">
+          <div class="icon-gradient w-14 h-14 rounded-xl flex items-center justify-center mb-6">
+            <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
+            </svg>
+          </div>
+          <h3 class="text-xl font-semibold text-gray-900 mb-3">简单配置</h3>
+          <p class="text-gray-600 leading-relaxed">通过简单的 JSON 配置即可启用，无需复杂的设置过程。</p>
+        </div>
+        
+        <!-- Feature 6 -->
+        <div class="glass rounded-2xl p-8 hover:shadow-lg hover:shadow-brand-500/10 transition-all">
+          <div class="icon-gradient w-14 h-14 rounded-xl flex items-center justify-center mb-6">
+            <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+            </svg>
+          </div>
+          <h3 class="text-xl font-semibold text-gray-900 mb-3">开源免费</h3>
+          <p class="text-gray-600 leading-relaxed">完全开源，基于 MIT 许可证，可自由使用和修改。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works Section -->
+  <section id="how-it-works" class="py-20 px-4 sm:px-6 lg:px-8 bg-white/50">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">快速开始</h2>
+        <p class="text-lg text-gray-600 max-w-2xl mx-auto">只需几个简单步骤即可开始使用</p>
+      </div>
+      
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+        <!-- Steps -->
+        <div class="space-y-8">
+          <div class="flex items-start space-x-4">
+            <div class="flex-shrink-0 w-10 h-10 bg-brand-500 rounded-full flex items-center justify-center text-white font-bold text-lg">1</div>
+            <div>
+              <h3 class="text-xl font-semibold text-gray-900 mb-2">克隆仓库</h3>
+              <p class="text-gray-600">克隆项目到本地目录</p>
+            </div>
+          </div>
+          
+          <div class="flex items-start space-x-4">
+            <div class="flex-shrink-0 w-10 h-10 bg-brand-500 rounded-full flex items-center justify-center text-white font-bold text-lg">2</div>
+            <div>
+              <h3 class="text-xl font-semibold text-gray-900 mb-2">安装依赖</h3>
+              <p class="text-gray-600">使用 uv 同步项目依赖</p>
+            </div>
+          </div>
+          
+          <div class="flex items-start space-x-4">
+            <div class="flex-shrink-0 w-10 h-10 bg-brand-500 rounded-full flex items-center justify-center text-white font-bold text-lg">3</div>
+            <div>
+              <h3 class="text-xl font-semibold text-gray-900 mb-2">配置 MCP</h3>
+              <p class="text-gray-600">在 MCP 配置文件中添加服务器配置</p>
+            </div>
+          </div>
+          
+          <div class="flex items-start space-x-4">
+            <div class="flex-shrink-0 w-10 h-10 bg-brand-500 rounded-full flex items-center justify-center text-white font-bold text-lg">4</div>
+            <div>
+              <h3 class="text-xl font-semibold text-gray-900 mb-2">开始搜索</h3>
+              <p class="text-gray-600">使用 search_music 函数开始搜索音乐</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Code Example -->
+        <div class="bg-gray-900 rounded-2xl p-6 shadow-xl">
+          <div class="flex items-center space-x-2 mb-4">
+            <div class="w-3 h-3 rounded-full bg-red-500"></div>
+            <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+            <div class="w-3 h-3 rounded-full bg-green-500"></div>
+            <span class="text-gray-400 text-sm ml-2">MCP 配置示例</span>
+          </div>
+          <pre class="text-sm text-gray-300 overflow-x-auto"><code>{
+  "mcpServers": {
+    "mcp-qqmusic-test-server": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "{your-local-path}/mcp-qqmusic-test-server",
+        "run",
+        "main.py"
+      ]
+    }
+  }
+}</code></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Environment Requirements -->
+  <section class="py-20 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto">
+      <div class="glass rounded-3xl p-8 sm:p-12">
+        <div class="text-center mb-12">
+          <h2 class="text-3xl font-bold text-gray-900 mb-4">环境要求</h2>
+          <p class="text-gray-600">确保您的系统满足以下要求</p>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
+          <div class="flex items-center space-x-4">
+            <div class="icon-gradient w-12 h-12 rounded-lg flex items-center justify-center">
+              <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+              </svg>
+            </div>
+            <div>
+              <h4 class="font-semibold text-gray-900">Python 3.13</h4>
+              <p class="text-gray-600 text-sm">最新 Python 版本</p>
+            </div>
+          </div>
+          
+          <div class="flex items-center space-x-4">
+            <div class="icon-gradient w-12 h-12 rounded-lg flex items-center justify-center">
+              <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
+              </svg>
+            </div>
+            <div>
+              <h4 class="font-semibold text-gray-900">uv 包管理器</h4>
+              <p class="text-gray-600 text-sm">快速 Python 包安装工具</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- API Documentation -->
+  <section class="py-20 px-4 sm:px-6 lg:px-8 bg-white/50">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">API 文档</h2>
+        <p class="text-lg text-gray-600 max-w-2xl mx-auto">使用 search_music 函数搜索音乐</p>
+      </div>
+      
+      <div class="max-w-4xl mx-auto">
+        <details class="glass rounded-2xl mb-6 overflow-hidden group" open>
+          <summary class="p-6 flex items-center justify-between cursor-pointer hover:bg-gray-50/50 transition-colors">
+            <div class="flex items-center space-x-3">
+              <div class="icon-gradient w-10 h-10 rounded-lg flex items-center justify-center">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+              </div>
+              <span class="text-lg font-semibold text-gray-900">search_music</span>
+              <span class="px-3 py-1 bg-gradient-to-br from-blue-500 to-blue-600 shadow-sm shadow-blue-500/30 text-white text-sm rounded-full">主要功能</span>
+            </div>
+            <svg class="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </summary>
+          <div class="p-6 pt-0 border-t border-gray-100">
+            <h4 class="font-semibold text-gray-900 mb-4">参数</h4>
+            <div class="space-y-3 mb-6">
+              <div class="flex items-start">
+                <code class="bg-gray-100 text-gray-800 px-2 py-1 rounded text-sm font-mono">keyword</code>
+                <span class="ml-3 text-gray-600 text-sm">字符串，必需 - 搜索关键词或短语</span>
+              </div>
+              <div class="flex items-start">
+                <code class="bg-gray-100 text-gray-800 px-2 py-1 rounded text-sm font-mono">page</code>
+                <span class="ml-3 text-gray-600 text-sm">整数，可选 - 分页页码（默认值：1）</span>
+              </div>
+              <div class="flex items-start">
+                <code class="bg-gray-100 text-gray-800 px-2 py-1 rounded text-sm font-mono">num</code>
+                <span class="ml-3 text-gray-600 text-sm">整数，可选 - 返回结果的最大数量（默认值：20）</span>
+              </div>
+            </div>
+            
+            <h4 class="font-semibold text-gray-900 mb-4">返回值</h4>
+            <p class="text-gray-600 mb-4">返回包含歌曲信息的对象数组，每个对象包含以下属性：</p>
+            <ul class="space-y-2 mb-6">
+              <li class="flex items-center"><span class="w-2 h-2 bg-brand-500 rounded-full mr-3"></span><code class="text-sm font-mono text-gray-700">id</code> - 歌曲ID</li>
+              <li class="flex items-center"><span class="w-2 h-2 bg-brand-500 rounded-full mr-3"></span><code class="text-sm font-mono text-gray-700">mid</code> - 音乐ID</li>
+              <li class="flex items-center"><span class="w-2 h-2 bg-brand-500 rounded-full mr-3"></span><code class="text-sm font-mono text-gray-700">name</code> - 歌曲名称</li>
+              <li class="flex items-center"><span class="w-2 h-2 bg-brand-500 rounded-full mr-3"></span><code class="text-sm font-mono text-gray-700">pmid</code> - 播放音乐ID</li>
+              <li class="flex items-center"><span class="w-2 h-2 bg-brand-500 rounded-full mr-3"></span><code class="text-sm font-mono text-gray-700">subtitle</code> - 歌曲副标题</li>
+              <li class="flex items-center"><span class="w-2 h-2 bg-brand-500 rounded-full mr-3"></span><code class="text-sm font-mono text-gray-700">time_public</code> - 发布时间</li>
+              <li class="flex items-center"><span class="w-2 h-2 bg-brand-500 rounded-full mr-3"></span><code class="text-sm font-mono text-gray-700">title</code> - 歌曲标题</li>
+            </ul>
+            
+            <h4 class="font-semibold text-gray-900 mb-4">示例响应</h4>
+            <div class="bg-gray-900 rounded-xl p-4 overflow-x-auto">
+              <pre class="text-sm text-gray-300"><code>[
+  {
+    "id": "123456",
+    "mid": "001Qu4I30eVFYb",
+    "name": "七里香",
+    "pmid": "",
+    "subtitle": "",
+    "time_public": "2004-08-03",
+    "title": "七里香"
+  }
+]</code></pre>
+            </div>
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ Section -->
+  <section id="faq" class="py-20 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-4xl mx-auto">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">常见问题</h2>
+        <p class="text-lg text-gray-600">快速解答您的疑问</p>
+      </div>
+      
+      <div class="space-y-4">
+        <details class="glass rounded-xl group">
+          <summary class="p-6 flex items-center justify-between cursor-pointer hover:bg-gray-50/50 transition-colors">
+            <span class="font-semibold text-gray-900">MCP 是什么？</span>
+            <svg class="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </summary>
+          <div class="px-6 pb-6 text-gray-600">
+            MCP（Modular Control Protocol，模块化控制协议）是一种用于在不同系统之间进行通信和控制的标准化协议。本项目使用 MCP 协议来提供音乐搜索功能。
+          </div>
+        </details>
+        
+        <details class="glass rounded-xl group">
+          <summary class="p-6 flex items-center justify-between cursor-pointer hover:bg-gray-50/50 transition-colors">
+            <span class="font-semibold text-gray-900">如何安装 uv 包管理器？</span>
+            <svg class="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </summary>
+          <div class="px-6 pb-6 text-gray-600">
+            uv 是一个快速的 Python 包管理器。您可以从 <a href="https://github.com/astral-sh/uv" target="_blank" rel="noopener noreferrer" class="text-brand-500 hover:text-brand-600">GitHub - uv</a> 获取安装说明。
+          </div>
+        </details>
+        
+        <details class="glass rounded-xl group">
+          <summary class="p-6 flex items-center justify-between cursor-pointer hover:bg-gray-50/50 transition-colors">
+            <span class="font-semibold text-gray-900">这个项目可以商用吗？</span>
+            <svg class="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </summary>
+          <div class="px-6 pb-6 text-gray-600">
+            这个项目仅供测试和学习目的使用。QQ音乐的相关服务请遵守其官方使用条款。
+          </div>
+        </details>
+        
+        <details class="glass rounded-xl group">
+          <summary class="p-6 flex items-center justify-between cursor-pointer hover:bg-gray-50/50 transition-colors">
+            <span class="font-semibold text-gray-900">搜索结果的数量有限制吗？</span>
+            <svg class="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </summary>
+          <div class="px-6 pb-6 text-gray-600">
+            是的，您可以使用 <code class="bg-gray-100 px-2 py-1 rounded text-sm">num</code> 参数控制返回结果的数量，默认值为 20。
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="py-12 px-4 sm:px-6 lg:px-8 border-t border-gray-200">
+    <div class="max-w-7xl mx-auto">
+      <div class="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
+        <div class="flex items-center space-x-3">
+          <img src="icon.png" alt="MCP QQ音乐测试服务器" class="w-8 h-8 rounded-lg">
+          <span class="font-semibold text-gray-900">MCP QQ音乐测试服务器</span>
+        </div>
+        
+        <div class="flex items-center space-x-6">
+          <a href="https://github.com/Samge0/mcp-qqmusic-test-server" target="_blank" rel="noopener noreferrer" class="text-gray-600 hover:text-brand-500 transition-colors">
+            GitHub
+          </a>
+          <span class="text-gray-400">·</span>
+          <a href="https://github.com/Samge0/mcp-qqmusic-test-server/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" class="text-gray-600 hover:text-brand-500 transition-colors">
+            MIT License
+          </a>
+        </div>
+        
+        <p class="text-gray-500 text-sm">© 2024 MCP QQ音乐测试服务器. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>
